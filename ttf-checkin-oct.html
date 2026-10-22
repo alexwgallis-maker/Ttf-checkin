@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
+<title>T2F Check-in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0a0a0a; --surface:#141414; --surface2:#1c1c1c; --border:#2a2a2a;
+    --accent:#1D9E75; --danger:#c1554a; --text:#f0f0f0; --text-secondary:#777;
+    --mono:'DM Mono',monospace; --display:'Barlow Condensed',sans-serif; --body:'Barlow',sans-serif;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html, body { background:var(--bg); color:var(--text); font-family:var(--body); min-height:100vh; -webkit-font-smoothing:antialiased; }
+  .app { max-width:520px; margin:0 auto; padding:24px 20px calc(32px + var(--safe-bottom)); }
+
+  .header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--border); }
+  .brand { font-family:var(--display); font-size:13px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  .date-str { font-family:var(--mono); font-size:11px; color:var(--text-secondary); margin-top:4px; letter-spacing:0.04em; }
+  .reset-btn { font-family:var(--mono); font-size:11px; color:var(--text-secondary); background:none; border:1px solid var(--border); border-radius:4px; padding:5px 10px; cursor:pointer; letter-spacing:0.04em; transition:border-color .15s,color .15s; white-space:nowrap; }
+  .reset-btn:hover { border-color:var(--text-secondary); color:var(--text); }
+
+  .stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:24px; }
+  .stat { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px 16px; }
+  .stat-label { font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-secondary); margin-bottom:6px; }
+  .stat-value { font-family:var(--display); font-size:36px; font-weight:700; line-height:1; color:var(--text); letter-spacing:-0.01em; }
+  .stat-value.accent { color:var(--accent); }
+  .stat-sub { font-size:11px; color:var(--text-secondary); margin-top:5px; line-height:1.4; }
+  .streak-edit-wrap { display:flex; align-items:baseline; gap:8px; }
+  .streak-edit-wrap input { width:70px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--display); font-size:28px; font-weight:700; padding:2px 8px; outline:none; }
+  .streak-edit-wrap input:focus { border-color:var(--accent); }
+
+  .goals-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .goals-label { font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-secondary); }
+  .edit-toggle { font-family:var(--mono); font-size:11px; color:var(--accent); background:none; border:none; cursor:pointer; letter-spacing:0.04em; padding:2px 4px; -webkit-tap-highlight-color:transparent; }
+
+  /* Overarching goal group */
+  .group { margin-bottom:18px; }
+  .group-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; padding-left:2px; }
+  .group-num { font-family:var(--display); font-size:15px; font-weight:700; color:var(--accent); flex-shrink:0; }
+  .group-title { font-family:var(--body); font-size:13px; font-weight:500; color:var(--text); line-height:1.3; }
+  .group-title .sub { color:var(--text-secondary); font-size:12px; }
+
+  .goal-row { display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:11px 14px; margin-bottom:8px; transition:border-color .15s; }
+  .goal-row.complete { border-color:rgba(29,158,117,0.4); background:rgba(29,158,117,0.06); }
+  .goal-emoji { font-size:16px; width:22px; flex-shrink:0; text-align:center; }
+  .goal-name { font-size:14px; font-weight:500; color:var(--text); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .goal-row.complete .goal-name { color:var(--accent); }
+  .bar-wrap { width:60px; flex-shrink:0; }
+  .bar-track { height:4px; background:var(--surface2); border-radius:999px; overflow:hidden; }
+  .bar-fill { height:100%; background:var(--accent); border-radius:999px; transition:width .2s ease; }
+  .bar-count { font-family:var(--mono); font-size:10px; color:var(--text-secondary); margin-top:3px; text-align:right; }
+  .goal-row.complete .bar-count { color:var(--accent); }
+  .btns { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .adj { width:28px; height:28px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--text); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .1s; -webkit-tap-highlight-color:transparent; }
+  .adj:active { background:var(--surface2); }
+
+  /* Edit mode */
+  .edit-group-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .edit-group-head .group-num { font-size:14px; }
+  .edit-group-head input { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--body); font-size:13px; padding:6px 8px; outline:none; }
+  .edit-row { display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:8px; }
+  .edit-row input { background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--body); font-size:14px; padding:7px 8px; outline:none; }
+  .edit-row input:focus, .edit-group-head input:focus { border-color:#444; }
+  .edit-emoji { width:44px; text-align:center; font-size:16px; }
+  .edit-name { flex:1; min-width:0; }
+  .edit-target-label { font-family:var(--mono); font-size:10px; color:var(--text-secondary); flex-shrink:0; }
+  .edit-target { width:48px; text-align:center; font-family:var(--mono); }
+  .edit-grp-select { background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); font-size:11px; padding:6px 4px; outline:none; flex-shrink:0; }
+  .del-btn { width:30px; height:30px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--danger); font-size:15px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+  .del-btn:active { background:rgba(193,85,74,0.12); }
+  .add-btn { width:100%; padding:10px; margin:2px 0 8px; background:transparent; border:1px dashed var(--border); border-radius:8px; color:var(--text-secondary); font-family:var(--mono); font-size:12px; cursor:pointer; letter-spacing:0.04em; transition:border-color .15s,color .15s; -webkit-tap-highlight-color:transparent; }
+  .add-btn:active { border-color:var(--accent); color:var(--accent); }
+  .edit-hint { font-size:11px; color:var(--text-secondary); margin:4px 2px 0; line-height:1.5; }
+
+  .note-section { margin-top:20px; }
+  .note-section label { font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-secondary); display:block; margin-bottom:8px; }
+  textarea { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:var(--body); font-size:14px; line-height:1.6; padding:12px 14px; resize:vertical; min-height:80px; outline:none; transition:border-color .15s; }
+  textarea:focus { border-color:#444; }
+  textarea::placeholder { color:var(--text-secondary); }
+
+  .gen-btn { margin-top:16px; width:100%; padding:13px; background:var(--accent); color:#fff; font-family:var(--display); font-size:15px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; border:none; border-radius:8px; cursor:pointer; transition:opacity .15s; -webkit-tap-highlight-color:transparent; }
+  .gen-btn:active { opacity:0.85; }
+
+  .output-section { margin-top:20px; display:none; }
+  .output-section label { font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-secondary); display:block; margin-bottom:8px; }
+  .output-box { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px; font-family:var(--mono); font-size:12px; line-height:1.7; white-space:pre-wrap; color:var(--text); word-break:break-word; }
+  .copy-row { display:flex; align-items:center; gap:10px; margin-top:10px; }
+  .copy-btn { padding:9px 20px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); font-size:12px; cursor:pointer; transition:border-color .15s; -webkit-tap-highlight-color:transparent; }
+  .copy-btn:active { border-color:var(--accent); }
+  .copy-ok { font-family:var(--mono); font-size:12px; color:var(--accent); opacity:0; transition:opacity .3s; }
+
+  .divider { height:1px; background:var(--border); margin:24px 0; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div>
+      <div class="brand">T2F · Daily Check-in</div>
+      <div class="date-str" id="date-str"></div>
+    </div>
+    <button class="reset-btn" onclick="resetWeek()">Reset week</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Day</div>
+      <div class="stat-value accent" id="day-count">—</div>
+      <div class="stat-sub">since Jan 3, 2026</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">🔥 Streak</div>
+      <div class="stat-value" id="streak-val">—</div>
+      <div class="streak-edit-wrap hidden" id="streak-edit">
+        <input type="number" min="0" id="streak-input" aria-label="edit streak">
+        <span class="stat-sub">days</span>
+      </div>
+      <div class="stat-sub" id="streak-sub">days checked in</div>
+    </div>
+  </div>
+
+  <div class="goals-head">
+    <div class="goals-label">Goals</div>
+    <button class="edit-toggle" id="edit-toggle" onclick="toggleEdit()">Edit</button>
+  </div>
+
+  <div id="goals-container"></div>
+
+  <div id="edit-extras" class="hidden">
+    <p class="edit-hint">Tap an emoji to change it. Rename goals, set the weekly target (/wk), and assign each to an overarching goal with the dropdown. Edit the three goal titles at the top of each group. Changes save automatically. Tap Done when finished.</p>
+  </div>
+
+  <div id="checkin-extras">
+    <div class="divider"></div>
+    <div class="note-section">
+      <label>Today's note</label>
+      <textarea id="note" placeholder="Quick paragraph — what did you do today?"></textarea>
+    </div>
+    <button class="gen-btn" onclick="generate()">Generate Discord message</button>
+    <div class="output-section" id="output-section">
+      <label>Copy into Discord</label>
+      <div class="output-box" id="output-box"></div>
+      <div class="copy-row">
+        <button class="copy-btn" onclick="copyMsg()">Copy</button>
+        <span class="copy-ok" id="copy-ok">Copied ✓</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ---- Overarching goals ----
+const DEFAULT_PILLARS = [
+  { id:'p1', label:'Ironman — Sept 2027', sub:'(while keeping muscle + strength)', short:"Ironman '27" },
+  { id:'p2', label:'Grow TTF to income', sub:'(→ 20 hrs/wk day job by end 2027)', short:'TTF → 20hrs/wk' },
+  { id:'p3', label:'Presence & emotional capacity', sub:'(better human + partner for Olivia)', short:'Presence for Olivia' },
+  { id:'p0', label:'Standalone', sub:'', short:'' },
+];
+
+// ---- Sub-goals (each tagged to a pillar) ----
+const DEFAULT_GOALS = [
+  { key:'gym',        emoji:'🏋️', name:'Gym',                max:4, pillar:'p1' },
+  { key:'endurance',  emoji:'🏃', name:'Endurance',           max:3, pillar:'p1' },
+  { key:'protein',    emoji:'🥩', name:'Hit protein macro',   max:7, pillar:'p1' },
+  { key:'content',    emoji:'📲', name:'Post content',        max:3, pillar:'p2' },
+  { key:'ttfwork',    emoji:'⏱️', name:'1hr working on TTF', max:1, pillar:'p2' },
+  { key:'meditation', emoji:'🧘', name:'Morning meditation',  max:1, pillar:'p3' },
+  { key:'journal',    emoji:'📓', name:'Weekly journal',      max:1, pillar:'p3' },
+  { key:'expenses',   emoji:'💸', name:'Expense tracking',    max:1, pillar:'p0' },
+];
+
+const S_PILLARS = 'ttf_pillars_v2';
+const S_GOALS   = 'ttf_goals_v2';
+const S_STATE   = 'ttf_state_v8';
+const S_STREAK  = 'ttf_streak_v8';
+
+// Anchors — day 352 = Oct 20 2026
+const ANCHOR_DATE = new Date('2026-10-20');
+const ANCHOR_DAY  = 352;
+// Streak: a check-in "day" rolls over at 4am (so a 1am check-in counts as the prior day)
+const DAY_CUTOFF_HOUR = 4;
+const STREAK_INIT = { count: 244, lastCheckin: '2026-10-20' };
+
+function load(key, fb){ try { const v=localStorage.getItem(key); return v?JSON.parse(v):fb; } catch(e){ return fb; } }
+function save(key, val){ try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
+
+let pillars = load(S_PILLARS, DEFAULT_PILLARS);
+let goals   = load(S_GOALS, DEFAULT_GOALS);
+let state   = load(S_STATE, {});
+let streak  = load(S_STREAK, STREAK_INIT);
+let editing = false;
+
+function savePillars(){ save(S_PILLARS, pillars); }
+function saveGoals(){ save(S_GOALS, goals); }
+
+// "Logical" date — shifts back by the cutoff hour so early-AM check-ins count as the previous day
+function logicalDateStr(d){
+  d = d ? new Date(d) : new Date();
+  const shifted = new Date(d.getTime() - DAY_CUTOFF_HOUR*3600000);
+  return shifted.getFullYear()+'-'+String(shifted.getMonth()+1).padStart(2,'0')+'-'+String(shifted.getDate()).padStart(2,'0');
+}
+function daysBetween(a,b){ return Math.round((new Date(b)-new Date(a))/86400000); }
+
+function getDayNum(){
+  const now=new Date(); now.setHours(0,0,0,0);
+  const anc=new Date(ANCHOR_DATE); anc.setHours(0,0,0,0);
+  return ANCHOR_DAY + Math.round((now-anc)/86400000);
+}
+
+// Streak rules:
+// - +1 per logical day, max once per day
+// - a single missed day is forgiven (catch up next day keeps streak)
+// - two consecutive missed days breaks it (reset to 1)
+function recordCheckin(){
+  const today = logicalDateStr();
+  if (streak.lastCheckin === today) return;        // already counted today
+  const gap = streak.lastCheckin ? daysBetween(streak.lastCheckin, today) : 1;
+  if (gap <= 2) streak.count += 1;                 // consecutive OR one-day catch-up
+  else streak.count = 1;                           // 2+ missed days → broken
+  streak.lastCheckin = today;
+  save(S_STREAK, streak);
+}
+
+function genKey(){ return 'g'+Date.now()+Math.floor(Math.random()*1000); }
+function pillarsForSelect(){ return pillars; }
+
+// ---------- Render ----------
+function renderStats(){
+  document.getElementById('date-str').textContent = new Date().toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  document.getElementById('day-count').textContent = getDayNum();
+  document.getElementById('streak-val').textContent = streak.count;
+  document.getElementById('streak-input').value = streak.count;
+}
+
+function render(){
+  renderStats();
+  // streak editing visibility
+  document.getElementById('streak-val').classList.toggle('hidden', editing);
+  document.getElementById('streak-sub').classList.toggle('hidden', editing);
+  document.getElementById('streak-edit').classList.toggle('hidden', !editing);
+
+  const c = document.getElementById('goals-container');
+  c.innerHTML = '';
+
+  if (editing){
+    renderEdit(c);
+  } else {
+    renderCheckin(c);
+  }
+}
+
+function renderCheckin(c){
+  pillars.forEach((p, pi) => {
+    const inGroup = goals.filter(g => g.pillar === p.id);
+    if (inGroup.length === 0) return;
+    const group = document.createElement('div');
+    group.className = 'group';
+    const numLabel = p.id === 'p0' ? '·' : (pi+1);
+    group.innerHTML = `
+      <div class="group-head">
+        <div class="group-num">${numLabel}</div>
+        <div class="group-title">${p.label}${p.sub ? ' <span class="sub">'+p.sub+'</span>' : ''}</div>
+      </div>`;
+    inGroup.forEach(g => {
+      const val = state[g.key] || 0;
+      const pct = g.max>0 ? Math.round(val/g.max*100) : 0;
+      const done = val >= g.max;
+      const row = document.createElement('div');
+      row.className = 'goal-row' + (done ? ' complete' : '');
+      row.innerHTML = `
+        <div class="goal-emoji">${g.emoji}</div>
+        <div class="goal-name">${g.name}</div>
+        <div class="bar-wrap">
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+          <div class="bar-count">${val}/${g.max}</div>
+        </div>
+        <div class="btns">
+          <button class="adj" onclick="adj('${g.key}',-1)">−</button>
+          <button class="adj" onclick="adj('${g.key}',1)">+</button>
+        </div>`;
+      group.appendChild(row);
+    });
+    c.appendChild(group);
+  });
+}
+
+function renderEdit(c){
+  pillars.forEach((p, pi) => {
+    const group = document.createElement('div');
+    group.className = 'group';
+    const numLabel = p.id === 'p0' ? '·' : (pi+1);
+    // editable pillar title (except Standalone)
+    if (p.id === 'p0'){
+      group.innerHTML = `<div class="edit-group-head"><div class="group-num">·</div><div class="group-title" style="color:var(--text-secondary)">Standalone</div></div>`;
+    } else {
+      const titleInput = document.createElement('div');
+      titleInput.className = 'edit-group-head';
+      titleInput.innerHTML = `<div class="group-num">${numLabel}</div>
+        <input value="${p.label.replace(/"/g,'&quot;')}" onchange="updatePillar('${p.id}','label',this.value)" aria-label="overarching goal title">`;
+      group.appendChild(titleInput);
+      const shortInput = document.createElement('div');
+      shortInput.className = 'edit-group-head';
+      shortInput.style.marginTop = '-4px';
+      shortInput.innerHTML = `<div class="group-num" style="opacity:0">${numLabel}</div>
+        <input value="${(p.short||'').replace(/"/g,'&quot;')}" placeholder="short label (Discord footer)" onchange="updatePillar('${p.id}','short',this.value)" aria-label="short footer label" style="font-size:11px;color:var(--text-secondary)">`;
+      group.appendChild(shortInput);
+    }
+    const inGroup = goals.map((g,idx)=>({g,idx})).filter(x => x.g.pillar === p.id);
+    inGroup.forEach(({g,idx}) => {
+      const opts = pillars.map(pp => `<option value="${pp.id}" ${pp.id===g.pillar?'selected':''}>${pp.id==='p0'?'—':(pillars.indexOf(pp)+1)}</option>`).join('');
+      const row = document.createElement('div');
+      row.className = 'edit-row';
+      row.innerHTML = `
+        <input class="edit-emoji" value="${g.emoji}" maxlength="4" onchange="updateGoal(${idx},'emoji',this.value)" aria-label="emoji">
+        <input class="edit-name" value="${g.name.replace(/"/g,'&quot;')}" onchange="updateGoal(${idx},'name',this.value)" aria-label="goal name">
+        <span class="edit-target-label">/wk</span>
+        <input class="edit-target" type="number" min="1" max="99" value="${g.max}" onchange="updateGoal(${idx},'max',this.value)" aria-label="weekly target">
+        <select class="edit-grp-select" onchange="updateGoal(${idx},'pillar',this.value)" aria-label="assign to overarching goal">${opts}</select>
+        <button class="del-btn" onclick="removeGoal(${idx})" aria-label="delete goal">🗑</button>`;
+      group.appendChild(row);
+    });
+    c.appendChild(group);
+  });
+  const addWrap = document.createElement('div');
+  addWrap.innerHTML = `<button class="add-btn" onclick="addGoal()">+ Add goal</button>`;
+  c.appendChild(addWrap);
+}
+
+// ---------- Check-in actions ----------
+function adj(key,d){
+  const g = goals.find(x=>x.key===key); if(!g) return;
+  state[key] = Math.max(0, Math.min(g.max, (state[key]||0)+d));
+  save(S_STATE, state); render();
+}
+function resetWeek(){
+  if(!confirm('Start a new week? This clears all goal counters. Your streak is not affected.')) return;
+  state = {}; save(S_STATE, state);
+  document.getElementById('note').value='';
+  document.getElementById('output-section').style.display='none';
+  render();
+}
+
+// ---------- Edit actions ----------
+function toggleEdit(){
+  if (editing){
+    // leaving edit mode: commit streak input
+    const v = parseInt(document.getElementById('streak-input').value,10);
+    if (!isNaN(v) && v>=0){ streak.count = v; save(S_STREAK, streak); }
+  }
+  editing = !editing;
+  document.getElementById('edit-toggle').textContent = editing ? 'Done' : 'Edit';
+  document.getElementById('edit-extras').classList.toggle('hidden', !editing);
+  document.getElementById('checkin-extras').classList.toggle('hidden', editing);
+  render();
+}
+function updatePillar(id, field, value){
+  const p = pillars.find(x=>x.id===id); if(!p) return;
+  if (field === 'short') { p.short = value.trim(); }
+  else { p.label = value.trim() || 'Goal'; }
+  savePillars();
+}
+function updateGoal(i, field, value){
+  if(!goals[i]) return;
+  if(field==='max'){ let n=parseInt(value,10); if(isNaN(n)||n<1)n=1; if(n>99)n=99; goals[i].max=n; }
+  else if(field==='emoji'){ goals[i].emoji = value.trim() || '•'; }
+  else if(field==='name'){ goals[i].name = value.trim() || 'Untitled'; }
+  else if(field==='pillar'){ goals[i].pillar = value; }
+  saveGoals(); render();
+}
+function addGoal(){
+  goals.push({ key:genKey(), emoji:'✅', name:'New goal', max:1, pillar:'p0' });
+  saveGoals(); render();
+}
+function removeGoal(i){
+  const g=goals[i]; if(!g) return;
+  if(!confirm(`Remove "${g.name}"?`)) return;
+  delete state[g.key]; goals.splice(i,1);
+  saveGoals(); save(S_STATE,state); render();
+}
+
+// ---------- Generate ----------
+function bars(val,max){ return '█'.repeat(Math.max(0,val)) + '░'.repeat(Math.max(0,max-val)); }
+
+function generate(){
+  recordCheckin();
+  const dateStr = new Date().toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'});
+  const note = document.getElementById('note').value.trim();
+  const dayNum = getDayNum();
+
+  // One aligned code block, all goals (grouped order, no block breaks)
+  const ordered = [];
+  pillars.forEach(p => { goals.filter(g => g.pillar === p.id).forEach(g => ordered.push(g)); });
+
+  const maxLen = ordered.length ? Math.max(...ordered.map(g => g.name.length)) + 2 : 2;
+  const rows = ordered.map(g => {
+    const val = state[g.key] || 0;
+    const done = val >= g.max ? ' ✅' : '';
+    return `${g.emoji} ${g.name.padEnd(maxLen,' ')}${bars(val,g.max)} ${val}/${g.max}${done}`;
+  });
+
+  // Compact footer: the three overarching goals (short labels), skip Standalone
+  const footer = pillars
+    .filter(p => p.id !== 'p0' && goals.some(g => g.pillar === p.id))
+    .map(p => p.short || p.label)
+    .join(' · ');
+
+  let msg = `📅 **Check-in — Day ${dayNum} — ${dateStr}**\n\`\`\`\n`;
+  msg += rows.join('\n');
+  msg += `\n\`\`\`\n🎯 ${footer}\n🔥 Streak: ${streak.count}`;
+  if (note) msg += `\n\n${note}`;
+
+  document.getElementById('output-box').textContent = msg;
+  document.getElementById('output-section').style.display='block';
+  render();
+}
+
+function copyMsg(){
+  const text = document.getElementById('output-box').textContent;
+  navigator.clipboard.writeText(text).then(showCopied).catch(()=>{
+    const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    showCopied();
+  });
+}
+function showCopied(){ const el=document.getElementById('copy-ok'); el.style.opacity='1'; setTimeout(()=>el.style.opacity='0',2000); }
+
+render();
+</script>
+</body>
+</html>
